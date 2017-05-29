@@ -8,6 +8,7 @@ const components = {};
 
 
 /** Reclaim a component for later re-use by the recycler. */
+//dcm: so components are now cached for re-use. Previously DOM elements were cached...
 export function collectComponent(component) {
 	let name = component.constructor.name;
 	(components[name] || (components[name] = [])).push(component);
@@ -15,21 +16,29 @@ export function collectComponent(component) {
 
 
 /** Create a component. Normalizes differences between PFC's and classful Components. */
+//dcm: PFC = stateless Purely Functional Component
 export function createComponent(Ctor, props, context) {
 	let list = components[Ctor.name],
 		inst;
 
+	//dcm: check for a stateful component
 	if (Ctor.prototype && Ctor.prototype.render) {
 		inst = new Ctor(props, context);
 		Component.call(inst, props, context);
 	}
+	//dcm: otherwise it's PFC. Normalise to a stateful component...
 	else {
-		inst = new Component(props, context);
-		inst.constructor = Ctor;
-		inst.render = doRender;
+		inst = new Component(props, context);	//dcm: just create a std Component
+		inst.constructor = Ctor;				//dcm: but make it's constructor. Looks like it's just re-using this existing attribute for doRender
+		inst.render = doRender;					//dcm: and make the render function doRender() below
 	}
 
+	//dcm: this is strange. Supposedly components are being re-used, but a new one has just been created!
 
+	//dcm: the code below instead tries to find a match, and if so, removes it from the cache & updates 
+	//dcm: the newly created Component's nextBase. No idea what that is! It appears to be only touched in component.js, so perhaps find out then.
+	//dcm: Update: I think what's going on is that nextBase points to the old DOM node associated with a prior instance of the component.
+	//dcm: this old DOM node is re-used if possible. So DOM nodes are cached, but not directly and instead indirectly via old recycled components.
 	if (list) {
 		for (let i=list.length; i--; ) {
 			if (list[i].constructor===Ctor) {
@@ -45,5 +54,5 @@ export function createComponent(Ctor, props, context) {
 
 /** The `.render()` method for a PFC backing instance. */
 function doRender(props, state, context) {
-	return this.constructor(props, context);
+	return this.constructor(props, context);	//dcm: state isn't relevant to PFCs, so it's left out in the call. constructor has been re-purposed for local use.
 }

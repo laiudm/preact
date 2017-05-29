@@ -5,6 +5,7 @@ import { render } from './render';
 import { rerender } from './render-queue';
 import options from './options';
 
+//dcm: okay nothing really here, except I don't know the difference between "export default" and "export"
 export default {
 	h,
 	createElement,
